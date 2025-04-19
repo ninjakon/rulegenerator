@@ -11,6 +11,7 @@ This project uses Large Language Models (LLMs) to generate JENA rules from clear
 │   ├── output/             # Generated JENA rules
 │   └── few_shot/           # Few-shot examples for LLM prompting
 ├── src/
+│   ├── cleanup.py          # Utility to cleanup old outputs
 │   ├── config.py           # Configuration settings
 │   ├── model.py            # LLM handling and fine-tuning
 │   ├── rule_generator.py   # Main rule generation logic
@@ -22,12 +23,14 @@ This project uses Large Language Models (LLMs) to generate JENA rules from clear
 ## Setup
 
 1. Create a virtual environment:
+
 ```bash
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
 2. Install dependencies:
+
 ```bash
 pip install -r requirements.txt
 ```
@@ -37,9 +40,12 @@ pip install -r requirements.txt
 1. Place your clear text files in the `data/input/` directory
 2. (Optional) Add few-shot examples in `data/few_shot/` directory
 3. Run the rule generator:
+
 ```bash
 python src/rule_generator.py --model "gpt2" --input_file "your_file.txt"
 ```
+
+Output files will be organized by model name and timestamp in the `data/output/` directory.
 
 ## Configuration
 
@@ -54,6 +60,23 @@ To fine-tune the model on your specific use case:
 1. Prepare your training data
 2. Modify fine-tuning parameters in `src/config.py`
 3. Run the fine-tuning script:
+
 ```bash
 python src/model.py --fine_tune
-``` 
+```
+
+## Cleanup
+
+To clean up old output directories:
+
+```bash
+python src/cleanup.py --delete-old-outputs
+```
+
+Or use the shorter option:
+
+```bash
+python src/cleanup.py -doo
+```
+
+This will remove all timestamp directories older than the current time while preserving the model directory structure.
