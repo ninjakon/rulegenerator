@@ -14,6 +14,7 @@ This project uses Large Language Models (LLMs) to generate JENA rules from clear
 │   ├── cleanup.py          # Utility to cleanup old outputs
 │   ├── config.py           # Configuration settings
 │   ├── model.py            # LLM handling and fine-tuning
+│   ├── model_handlers.py   # Model architecture handlers
 │   ├── rule_generator.py   # Main rule generation logic
 │   └── utils.py            # Utility functions
 ├── requirements.txt        # Project dependencies
@@ -52,6 +53,46 @@ Output files will be organized by model name and timestamp in the `data/output/`
 - Model selection can be done via command line arguments
 - Few-shot examples can be added in the `data/few_shot/` directory
 - Fine-tuning configurations can be modified in `src/config.py`
+
+## Model Support
+
+The rule generator supports multiple model architectures through a flexible handler system:
+
+### Pre-registered Models
+
+The following models are pre-registered and ready to use:
+
+- **CausalLM models** (GPT-style, auto-regressive):
+
+  - `gpt2` - OpenAI GPT-2
+  - `Salesforce/codegen-350M-multi` - CodeGen for multi-language code generation
+
+- **Seq2SeqLM models** (Encoder-Decoder, T5-style):
+  - `google-t5/t5-small` - Google's T5 small model
+  - `google-t5/t5-base` - Google's T5 base model
+  - `facebook/bart-base` - Facebook's BART base model
+
+### Listing Available Models
+
+To see all registered models and their handler types:
+
+```bash
+python src/model.py --list_models
+```
+
+### Custom Model Support
+
+You can add support for additional models by modifying `src/model_handlers.py`:
+
+1. Create a new handler class if needed (for different model architectures)
+2. Register your model using the `register_model` function
+
+Example of registering a new model:
+
+```python
+# In src/model_handlers.py
+register_model("your/custom-model", CausalLMHandler)
+```
 
 ## Fine-tuning
 
