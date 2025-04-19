@@ -15,7 +15,8 @@ from config import (
     GENERATION_CONFIG,
     FEW_SHOT_DIR
 )
-from model_handlers import get_model_handler, list_models
+from model_handlers import get_model_handler, list_models as list_model_handlers
+from prompt_handlers import get_prompt, list_prompts
 
 # Configure logging
 logging.basicConfig(level=logging.INFO,
@@ -24,10 +25,11 @@ logger = logging.getLogger(__name__)
 
 
 class RuleGenerator:
-    def __init__(self, model_name, device=None):
+    def __init__(self, model_name, prompt_name="default", device=None):
         self.device = device or (
             "cuda" if torch.cuda.is_available() else "cpu")
         self.model_name = model_name
+        self.prompt_name = prompt_name
 
         # Get model handler and load model and tokenizer
         self.model_handler = get_model_handler(model_name)
@@ -36,6 +38,9 @@ class RuleGenerator:
             MODEL_CACHE_DIR,
             self.device
         )
+
+        # Get prompt handler
+        self.prompt_handler = get_prompt(prompt_name)
 
         # Load few-shot examples if available
         self.few_shot_examples = self._load_few_shot_examples()
@@ -50,8 +55,8 @@ class RuleGenerator:
 
     def generate_rules(self, text):
         """Generate JENA rules from input text."""
-        # Prepare prompt with few-shot examples if available
-        prompt = self._prepare_prompt(text)
+        # Prepare prompt using the specified prompt handler
+        prompt = self.prompt_handler.generate(text, self.few_shot_examples)
 
         # Tokenize input
         inputs = self.tokenizer(prompt, return_tensors="pt").to(self.device)
@@ -63,68 +68,6 @@ class RuleGenerator:
             inputs,
             GENERATION_CONFIG
         )
-
-    def _prepare_prompt(self, text):
-        """Prepare the prompt with few-shot examples if available."""
-        if not self.few_shot_examples:
-            # Basic prompt with better instructions
-            return f"""
-You are a specialized translator that converts natural language specifications into JENA rules.
-
-JENA rules follow this structure:
-1. Prefix declarations (@prefix)
-2. Rule declarations with a name in square brackets
-3. Condition patterns in the body (above the '->') 
-4. Conclusion patterns in the head (after the '->')
-
-Input: {text}
-
-Output JENA rules that capture these requirements. Start with appropriate prefixes and create specific validation rules:
-"""
-
-        # Enhanced prompt with few-shot examples and detailed instructions
-        prompt = """
-You are a specialized translator that converts natural language specifications into formal JENA rules.
-
-JENA rules have specific components:
-1. PREFIX declarations (@prefix) that define namespaces
-2. Rule declarations with a name in square brackets [ruleName:]
-3. Condition patterns (body) that specify what to match
-4. Conclusion patterns (head) that specify what to infer or validate
-5. The arrow symbol '->' separates conditions from conclusions
-
-Important guidelines:
-- Use appropriate namespaces (rdf, spec, xsd, etc.)
-- Create descriptive rule names
-- Define required checks and validations
-- Handle both success (OK) and failure (FAIL) cases
-- Use proper JENA syntax for variables (?var), functions, and literals
-
-Here are examples of natural language specifications and their corresponding JENA rules:
-
-"""
-
-        # Add few-shot examples with better formatting
-        for example in self.few_shot_examples:
-            prompt += f"""
-### SPECIFICATION:
-{example['text']}
-
-### JENA RULES:
-{example['rules']}
-
-"""
-
-        # Add target specification with clear expectations
-        prompt += f"""
-Now translate the following specification into proper JENA rules:
-
-### SPECIFICATION:
-{text}
-
-### JENA RULES:
-"""
-        return prompt
 
     def fine_tune(self, training_data):
         """Fine-tune the model on custom data."""
@@ -176,17 +119,25 @@ def main():
     parser = argparse.ArgumentParser(description="Rule Generator Model")
     parser.add_argument("--model", type=str, default="gpt2",
                         help="Model name to use")
+    parser.add_argument("--prompt", type=str, default="default",
+                        help="Prompt template to use")
     parser.add_argument("--fine_tune", action="store_true",
                         help="Fine-tune the model")
     parser.add_argument("--list_models", action="store_true",
                         help="List all registered models")
+    parser.add_argument("--list_prompts", action="store_true",
+                        help="List all registered prompt templates")
     args = parser.parse_args()
 
     if args.list_models:
-        list_models()
+        list_model_handlers()
         return
 
-    generator = RuleGenerator(args.model)
+    if args.list_prompts:
+        list_prompts()
+        return
+
+    generator = RuleGenerator(args.model, args.prompt)
 
     if args.fine_tune:
         # Load training data and fine-tune

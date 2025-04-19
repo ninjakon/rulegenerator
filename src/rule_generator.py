@@ -34,6 +34,12 @@ def main():
         help="Model name to use (default: gpt2)"
     )
     parser.add_argument(
+        "--prompt",
+        type=str,
+        default="default",
+        help="Prompt template to use (default: default)"
+    )
+    parser.add_argument(
         "--input_file",
         type=str,
         help="Specific input file to process (optional)"
@@ -46,7 +52,7 @@ def main():
     model_output_dir.mkdir(parents=True, exist_ok=True)
 
     # Initialize rule generator
-    generator = RuleGenerator(args.model)
+    generator = RuleGenerator(args.model, args.prompt)
 
     if args.input_file:
         # Process single file
