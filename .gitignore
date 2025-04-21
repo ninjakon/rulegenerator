@@ -160,5 +160,7 @@ cython_debug/
 #.idea/
 
 # Rule generator
-data/
-models/
+data/**
+!data/**/.gitkeep
+models/**
+!models/**/.gitkeep
