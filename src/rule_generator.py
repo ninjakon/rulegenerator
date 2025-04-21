@@ -1,4 +1,5 @@
 import argparse
+import os
 from pathlib import Path
 from model import RuleGenerator
 from config import INPUT_DIR, OUTPUT_DIR
@@ -40,6 +41,11 @@ def main():
         help="Prompt template to use (default: default)"
     )
     parser.add_argument(
+        "--token",
+        type=str,
+        help="Hugging Face token for accessing gated models"
+    )
+    parser.add_argument(
         "--input_file",
         type=str,
         help="Specific input file to process (optional)"
@@ -51,8 +57,11 @@ def main():
     model_output_dir = OUTPUT_DIR / args.model / timestamp
     model_output_dir.mkdir(parents=True, exist_ok=True)
 
+    # If token is provided in command line, use it, otherwise try environment variable
+    token = args.token or os.environ.get("HUGGINGFACE_TOKEN")
+
     # Initialize rule generator
-    generator = RuleGenerator(args.model, args.prompt)
+    generator = RuleGenerator(args.model, args.prompt, token=token)
 
     if args.input_file:
         # Process single file

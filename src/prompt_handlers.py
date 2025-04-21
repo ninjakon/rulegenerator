@@ -156,6 +156,79 @@ JENA RULES:
         return prompt
 
 
+class CodePrompt(Prompt):
+    """Code-focused prompt optimized for code generation models like StarCoder."""
+    name = "code"
+    description = "Code-oriented prompt with explicit syntax examples for coding models"
+
+    def generate(self, text: str, few_shot_examples: Optional[List[Dict[str, str]]] = None) -> str:
+        # Start with a comment-style header for code models
+        prompt = """
+// JENA RULE GENERATION
+// Task: Convert natural language requirements into JENA rule syntax
+
+/* 
+JENA Rules Syntax Reference:
+---------------------------
+1. Prefix declarations:
+   @prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+   @prefix spec: <http://uibk.ac.at/se/bimclipse/reasoning/specification#>
+   @prefix myspec: <http://myspec#>
+
+2. Rule format:
+   [ruleName:
+      (?subject predicate ?object)
+      ...condition patterns...
+      ->
+      (?subject result ?value)
+      ...conclusion patterns...
+   ]
+
+3. Success check example:
+   [checkValid_OK:
+      (?s rdf:type myspec:Entity)
+      (?s myspec:hasValue ?v)
+      greaterThan(?v, "100"^^xsd:double)
+      ->
+      (?s myspec:checkValid myspec:OK)
+   ]
+
+4. Failure check example:
+   [checkValid_FAIL:
+      (?s myspec:checkValid myspec:FAIL) <-
+      (?s rdf:type myspec:Entity)
+      noValue(?s, myspec:checkValid, ?x)
+   ]
+*/
+
+"""
+
+        # Add examples if available
+        if few_shot_examples:
+            prompt += "// EXAMPLES:\n"
+            for i, example in enumerate(few_shot_examples):
+                prompt += f"""
+/* Example {i+1} - Input:
+{example['text']}
+*/
+
+/* Example {i+1} - Output: */
+{example['rules']}
+
+"""
+
+        # Add current specification with clear code comment markers
+        prompt += f"""
+/* Current Specification:
+{text}
+*/
+
+// Output JENA rules below:
+
+"""
+        return prompt
+
+
 # Register available prompts
 def register_prompt(prompt_class: Type[Prompt]):
     """Register a prompt template."""
@@ -168,6 +241,7 @@ def register_prompt(prompt_class: Type[Prompt]):
 register_prompt(DefaultPrompt)
 register_prompt(SimplePrompt)
 register_prompt(StructuredPrompt)
+register_prompt(CodePrompt)
 
 
 def get_prompt(prompt_name: str) -> Prompt:

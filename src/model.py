@@ -8,6 +8,7 @@ from datasets import Dataset
 import argparse
 import json
 import logging
+import os
 
 from config import (
     MODEL_CACHE_DIR,
@@ -25,18 +26,20 @@ logger = logging.getLogger(__name__)
 
 
 class RuleGenerator:
-    def __init__(self, model_name, prompt_name="default", device=None):
+    def __init__(self, model_name, prompt_name="default", device=None, token=None):
         self.device = device or (
             "cuda" if torch.cuda.is_available() else "cpu")
         self.model_name = model_name
         self.prompt_name = prompt_name
+        self.token = token
 
         # Get model handler and load model and tokenizer
         self.model_handler = get_model_handler(model_name)
         self.tokenizer, self.model = self.model_handler.load_model(
             model_name,
             MODEL_CACHE_DIR,
-            self.device
+            self.device,
+            token=self.token
         )
 
         # Get prompt handler
@@ -121,6 +124,8 @@ def main():
                         help="Model name to use")
     parser.add_argument("--prompt", type=str, default="default",
                         help="Prompt template to use")
+    parser.add_argument("--token", type=str,
+                        help="Hugging Face token for accessing gated models")
     parser.add_argument("--fine_tune", action="store_true",
                         help="Fine-tune the model")
     parser.add_argument("--list_models", action="store_true",
@@ -137,7 +142,10 @@ def main():
         list_prompts()
         return
 
-    generator = RuleGenerator(args.model, args.prompt)
+    # If token is provided in command line, use it, otherwise try environment variable
+    token = args.token or os.environ.get("HUGGINGFACE_TOKEN")
+
+    generator = RuleGenerator(args.model, args.prompt, token=token)
 
     if args.fine_tune:
         # Load training data and fine-tune

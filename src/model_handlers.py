@@ -1,9 +1,11 @@
+import torch
 from transformers import (
     AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
     AutoTokenizer
 )
 import logging
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Type, Optional
 
@@ -20,7 +22,7 @@ class ModelHandler(ABC):
     """Base abstract class for handling different model architectures."""
 
     @abstractmethod
-    def load_model(self, model_name: str, cache_dir: str, device: str):
+    def load_model(self, model_name: str, cache_dir: str, device: str, token: Optional[str] = None):
         """Load model and tokenizer."""
         pass
 
@@ -33,14 +35,21 @@ class ModelHandler(ABC):
 class CausalLMHandler(ModelHandler):
     """Handler for AutoModelForCausalLM models (GPT-2, CodeGen, etc.)."""
 
-    def load_model(self, model_name: str, cache_dir: str, device: str):
+    def load_model(self, model_name: str, cache_dir: str, device: str, token: Optional[str] = None):
+        # Set token if provided
+        if token:
+            os.environ["HUGGINGFACE_TOKEN"] = token
+            logger.info(f"Using provided token for model: {model_name}")
+
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            token=token
         )
         model = AutoModelForCausalLM.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            token=token
         ).to(device)
         return tokenizer, model
 
@@ -55,14 +64,16 @@ class CausalLMHandler(ModelHandler):
 class Seq2SeqLMHandler(ModelHandler):
     """Handler for AutoModelForSeq2SeqLM models (T5, BART, etc.)."""
 
-    def load_model(self, model_name: str, cache_dir: str, device: str):
+    def load_model(self, model_name: str, cache_dir: str, device: str, token: Optional[str] = None):
         tokenizer = AutoTokenizer.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            token=token
         )
         model = AutoModelForSeq2SeqLM.from_pretrained(
             model_name,
-            cache_dir=cache_dir
+            cache_dir=cache_dir,
+            token=token
         ).to(device)
         return tokenizer, model
 
@@ -90,6 +101,14 @@ register_model("Salesforce/codegen-350M-multi", CausalLMHandler)
 register_model("google-t5/t5-small", Seq2SeqLMHandler)
 register_model("google-t5/t5-base", Seq2SeqLMHandler)
 register_model("facebook/bart-base", Seq2SeqLMHandler)
+
+# Register StarCoder model
+register_model("bigcode/starcoder", CausalLMHandler)
+# Register smaller StarCoder variants which might be more manageable
+register_model("bigcode/starcoderbase", CausalLMHandler)
+register_model("bigcode/starcoderbase-1b", CausalLMHandler)
+register_model("bigcode/starcoderbase-3b", CausalLMHandler)
+register_model("bigcode/starcoderbase-7b", CausalLMHandler)
 
 
 def get_model_handler(model_name: str):
